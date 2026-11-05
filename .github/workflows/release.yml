@@ -1,0 +1,61 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（如 v1.0.0）'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行测试
+        run: npm test
+
+      - name: 打包 Windows 安装版与便携版
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: 列出产物
+        run: dir release
+
+      - name: 发布 Release 并上传安装包
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }} 首个版本
+          body: |
+            实时看见每一秒的进账。
+
+            - Windows 安装版与便携版
+            - macOS / Linux 可自行编译
+            - 也可直接用 `src/index.html` 网页版
+
+            > 安装包未做代码签名，SmartScreen 提示时选「更多信息 → 仍要运行」。
+          files: |
+            release/WorkEncourager-Setup-*.exe
+            release/WorkEncourager-Portable-*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
