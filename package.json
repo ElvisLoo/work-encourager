@@ -1,0 +1,65 @@
+{
+  "name": "work-encourager",
+  "version": "1.0.0",
+  "description": "牛马鼓励器 · 上班鼓励器 — 实时看见每一秒的进账（Windows / macOS / Linux 桌面应用，也可直接用浏览器打开）",
+  "main": "src/main.js",
+  "private": true,
+  "author": "jikegang",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "web": "node scripts/serve.js",
+    "test": "node --test test/",
+    "dist": "electron-builder --win --x64",
+    "dist:portable": "electron-builder --win portable --x64",
+    "dist:mac": "electron-builder --mac --x64 --arm64"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.jikegang.workencourager",
+    "productName": "牛马鼓励器",
+    "copyright": "Copyright © 2026 极客港",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "WorkEncourager-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "牛马鼓励器",
+      "uninstallDisplayName": "牛马鼓励器 ${version}",
+      "artifactName": "WorkEncourager-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "WorkEncourager-Portable-${version}.${ext}"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.productivity",
+      "artifactName": "WorkEncourager-mac-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility",
+      "artifactName": "WorkEncourager-linux-${version}-${arch}.${ext}"
+    }
+  }
+}
