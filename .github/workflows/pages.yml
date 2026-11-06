@@ -29,9 +29,9 @@ jobs:
 
       - name: 配置 Pages
         uses: actions/configure-pages@v5
-        with:
-          # 仓库还没开 Pages 时自动开启（Source 选 GitHub Actions）
-          enablement: true
+        # 注意：不加 enablement:true —— 用 GITHUB_TOKEN 创建 Pages 站点需要
+        # 额外权限，实测会 401。仓库需在 Settings → Pages 里手动
+        # 把 Source 选为「GitHub Actions」一次，之后本工作流每次都能正常部署。
 
       - name: 打包站点
         uses: actions/upload-pages-artifact@v3
