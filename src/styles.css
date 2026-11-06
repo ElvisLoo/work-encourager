@@ -554,6 +554,250 @@ body::after {
 }
 .footer-brand { letter-spacing: .05em; }
 
+/* ---------------- 今日黄历 ---------------- */
+.almanac { padding-bottom: 12px; }
+.almanac > .card-title > span:first-child {
+  font-size: 12.5px;
+  letter-spacing: .1em;
+  color: var(--text);
+}
+.almanac > .card-title { align-items: center; margin-bottom: 10px; }
+.al-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 11px;
+}
+.al-lunar {
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: .04em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.al-gz {
+  font-family: var(--font-num);
+  font-size: 10.5px;
+  color: var(--text-3);
+  letter-spacing: .04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-animal {
+  flex-shrink: 0;
+  margin-left: 3px;
+  /* 与农历基线对齐，不抢视觉重心 */
+  transform: translateY(-1px);
+  font-size: 10px;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.al-terms { display: flex; flex-direction: column; gap: 8px; }
+.al-tags { padding-right: 2px; }
+.al-row { display: flex; align-items: flex-start; gap: 8px; }
+.al-key {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.al-key.yi { background: #dceac9; color: #3d6234; }
+.al-key.ji { background: #e6dccb; color: #7a6650; }
+body.theme-night .al-key.yi { background: #2b3327; color: #9dc08f; }
+body.theme-night .al-key.ji { background: #2f2820; color: #9c8a72; }
+
+.al-tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.al-tag {
+  font-size: 11px;
+  line-height: 1.5;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: var(--card-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.al-tag.yi { border-color: #b9cda4; color: #3d6234; background: #eef4e6; }
+
+.al-tag.ji { border-color: #d5c7b0; color: #7a6650; background: #f7f0e4; }
+body.theme-night .al-tag.yi { border-color: #3a4633; color: #9dc08f; background: #262e23; }
+
+.al-extra {
+  margin-top: 9px;
+  font-size: 10.5px;
+  color: var(--accent);
+  letter-spacing: .03em;
+}
+
+.al-tip {
+  margin: 12px 0 0;
+  padding: 8px 0 8px 10px;
+  border-top: 1px solid var(--border);
+  border-left: 2px solid var(--accent-soft);
+  border-radius: 0 0 0 2px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text);
+  letter-spacing: .02em;
+}
+
+.al-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 9px;
+  margin-bottom: 1px;
+  padding: 3px 8px 3px 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  letter-spacing: .04em;
+}
+.al-toggle:hover {
+  color: var(--accent);
+}
+.al-toggle:hover .al-toggle-label { text-decoration: underline; text-underline-offset: 2px; }
+/* 展开箭头：用内联 SVG，不依赖字体字形 */
+.al-caret {
+  display: inline-block;
+  width: 9px;
+  height: 6px;
+  margin-left: 4px;
+  vertical-align: -1px;
+  transition: transform .22s ease;
+  flex-shrink: 0;
+  /* 让细线条在小尺寸下仍然看得出是箭头 */
+  stroke-width: 2.2;
+}
+.al-toggle[aria-expanded="true"] .al-caret {
+  transform: rotate(180deg);
+}
+
+.al-week {
+  margin-top: 10px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+  padding-left: 7px;
+  padding-right: 7px;
+  margin-left: -7px;
+  margin-right: -7px;
+  box-sizing: content-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.al-week-row {
+  /* 四列固定宽度，保证 7 行严格左对齐；宜忌列可伸缩 */
+  padding-left: 2px;
+  display: grid;
+  grid-template-columns: 38px 62px 18px 1fr;
+  align-items: center;
+  column-gap: 7px;
+  font-size: 10.5px;
+  line-height: 1.9;
+  color: var(--text-2);
+  padding: 0 0;
+  border-radius: 4px;
+}
+.al-week-row.today {
+  /* 整行不染橙：只让日期列突出，农历/吉凶/宜忌保持中性，避免看起来像错误状态 */
+  font-weight: 600;
+}
+/* 高亮用伪元素做，能左右各外扩 6px，不撑开布局 */
+.al-week { position: relative; }
+.al-week-row { position: relative; }
+.al-week-row.today::before {
+  content: "";
+  position: absolute;
+  /* inset 让色带铺满整行盒，不再随内容宽度截断 */
+  inset: 0 -8px;
+  background: rgba(181, 100, 44, .075);
+  border-radius: 5px;
+  z-index: 0;
+}
+.al-week-row > * { position: relative; z-index: 1; }
+.al-wd {
+  font-family: var(--font-num);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.al-week-row.today .al-wd { color: var(--accent); }
+.al-week-row.today .al-wd-cn,
+.al-week-row.today .al-week-terms { color: var(--text-2); font-weight: 400; }
+.al-wd-cn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+/* 吉/凶：做成小方块徽标，与右侧「宜」字在视觉上明确分开 */
+.al-luck {
+  justify-self: start;
+  width: 15px;
+  height: 15px;
+  line-height: 15px;
+  text-align: center;
+  font-size: 9.5px;
+  border-radius: 3px;
+  font-style: normal;
+}
+.al-luck.ji { color: #3d6234; background: #dceac9; }
+.al-luck.xiong { color: #7a6650; background: #ece2d2; }
+body.theme-night .al-luck.ji { color: #9dc08f; background: #2b3327; }
+body.theme-night .al-luck.xiong { color: #b39a7a; background: #2f2820; }
+.al-week-terms {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+/* 周列表里的「宜」字：固定宽度，让后面条目的起点对齐 */
+.al-yi-k {
+  font-style: normal;
+  color: var(--text-3);
+  margin-right: 4px;
+  font-size: 9.5px;
+}
+
+
+/* 黄道吉日徽标：做成小印章的样子，比标题更有存在感 */
+#alLuckBadge {
+  font-size: 11px;
+  letter-spacing: .06em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+}
+#alLuckBadge.luck-ji {
+  color: #3d6234;
+  border-color: #b9cda4;
+  background: #eef4e6;
+}
+body.theme-night #alLuckBadge.luck-ji {
+  color: #9dc08f;
+  border-color: #3a4633;
+  background: #262e23;
+}
+
 /* ---------------- 设置面板 ---------------- */
 .settings-mask {
   position: fixed;
@@ -785,6 +1029,7 @@ body.mode-mini .month-strip,
 body.mode-mini .rate-grid,
 body.mode-mini .convert,
 body.mode-mini .goals,
+body.mode-mini .almanac,
 body.mode-mini .encourage,
 body.mode-mini .footer,
 body.mode-mini .countdown { display: none; }

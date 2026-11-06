@@ -172,6 +172,39 @@
       </div>
     </section>
 
+    <!-- 今日黄历 -->
+    <section class="card almanac" id="almanacCard">
+      <div class="card-title">
+        <span>今日黄历</span>
+        <span class="card-title-sub" id="alLuckBadge">—</span>
+      </div>
+      <div class="al-head">
+        <span class="al-lunar" id="alLunar">—</span>
+        <span class="al-gz" id="alGanzhi"></span>
+        <span class="al-animal" id="alAnimal"></span>
+      </div>
+      <div class="al-terms">
+        <div class="al-row">
+          <span class="al-key yi">宜</span>
+          <span class="al-tags" id="alYi"></span>
+        </div>
+        <div class="al-row">
+          <span class="al-key ji">忌</span>
+          <span class="al-tags" id="alJi"></span>
+        </div>
+      </div>
+      <div class="al-extra" id="alExtra" hidden></div>
+      <p class="al-tip" id="alTip"></p>
+      <button class="al-toggle" id="btnAlmanacMore" aria-expanded="false">
+        <span class="al-toggle-label">看看最近几天</span>
+        <svg class="al-caret" viewBox="0 0 10 6" aria-hidden="true">
+          <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="al-week" id="alWeek" hidden></div>
+    </section>
+
     <!-- 拍拍自己 -->
     <section class="card encourage" id="encourageCard">
       <p class="encourage-text" id="encourageText">你不是在打工，你是在给自己的账户充值。</p>
@@ -193,7 +226,7 @@
       <h2>设置</h2>
       <button class="icon-btn" id="btnCloseSettings" aria-label="关闭">
         <svg viewBox="0 0 24 24" width="16" height="16">
-          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
         </svg>
       </button>
     </div>
@@ -341,7 +374,10 @@
 
 <div class="toast" id="toast" hidden></div>
 
+<!-- lunar-javascript 由构建脚本内联；此处提供浏览器/Electron 下的加载路径 -->
+<script src="vendor/lunar.js"></script>
 <script src="earn.js"></script>
+<script src="almanac.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

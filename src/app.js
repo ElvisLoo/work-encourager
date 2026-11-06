@@ -97,6 +97,15 @@
     goalFill: $('goalFill'),
     goalPct: $('goalPct'),
     goalNote: $('goalNote'),
+    alLunar: $('alLunar'),
+    alGanzhi: $('alGanzhi'),
+    alAnimal: $('alAnimal'),
+    alLuckBadge: $('alLuckBadge'),
+    alYi: $('alYi'),
+    alJi: $('alJi'),
+    alExtra: $('alExtra'),
+    alTip: $('alTip'),
+    alWeek: $('alWeek'),
     encourageText: $('encourageText'),
     toast: $('toast'),
     settingsMask: $('settingsMask'),
@@ -257,6 +266,9 @@
     /* 小目标 */
     renderGoal(c, r);
 
+    /* 黄历：内部自带「每天只渲染一次」的判断 */
+    renderAlmanac(now);
+
     /* 打码 */
     document.body.classList.toggle('masked', masked);
 
@@ -331,6 +343,98 @@
     return String(s).replace(/[&<>"]/g, function (ch) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
     });
+  }
+
+  /* ---------------- 今日黄历 ----------------
+   * 黄历一天只变一次，绝不能跟着 50ms 的主循环重绘：
+   * 这里记下已渲染的日期，只有跨天或首次进入才重建 DOM。
+   */
+  var almanacDay = '';
+  var almanacOpen = false;
+
+  function renderAlmanac(now) {
+    if (!window.Almanac) return;
+    var d = new Date(now);
+    var key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    if (key === almanacDay) return;
+    almanacDay = key;
+
+    var a;
+    try {
+      a = window.Almanac.of(d);
+    } catch (e) {
+      return; // 黄历是锦上添花，算不出来就整块留空，不影响计薪
+    }
+    if (!a || !a.ymd) return;
+
+    setText(el.alLunar, 'alLunar', a.lunar ? a.lunar.text : '');
+    var gz = a.ganZhi || {};
+    setText(el.alGanzhi, 'alGanzhi', [gz.year, gz.month, gz.day].filter(Boolean).join(' · '));
+    setText(el.alAnimal, 'alAnimal', a.shengXiao ? '属' + a.shengXiao : '');
+
+    /* 黄道 / 黑道 */
+    var badge = el.alLuckBadge;
+    if (badge) {
+      var isLuck = a.luck === '吉';
+      badge.textContent = (a.tianShen || '—') + (a.tianShenType ? ' · ' + a.tianShenType : '') +
+        (isLuck ? ' · 吉' : ' · 凶');
+      badge.classList.toggle('luck-ji', isLuck);
+    }
+
+    renderTags(el.alYi, a.yi, 'yi', '宜');
+    renderTags(el.alJi, a.ji, 'ji', '忌');
+
+    /* 节气 / 节日 */
+    var extras = [];
+    if (a.jieQi) extras.push('节气 · ' + a.jieQi);
+    if (a.festivals && a.festivals.length) extras.push(a.festivals.join(' · '));
+    if (extras.length) {
+      el.alExtra.textContent = extras.join('　');
+      el.alExtra.hidden = false;
+    } else {
+      el.alExtra.hidden = true;
+    }
+
+    setText(el.alTip, 'alTip', a.tip || '');
+
+    if (almanacOpen) renderWeek(d);
+  }
+
+  function renderTags(node, list, cls, kind) {
+    if (!node) return;
+    var arr = (list || []).slice(0, 4);
+    if (!arr.length) {
+      node.innerHTML = '<span class="al-tag">' + (kind === '宜' ? '诸事不宜' : '百无禁忌') + '</span>';
+      return;
+    }
+    node.innerHTML = arr.map(function (t) {
+      return '<span class="al-tag ' + cls + '">' + escapeHtml(t) + '</span>';
+    }).join('');
+  }
+
+  function renderWeek(d) {
+    if (!el.alWeek) return;
+    var days;
+    try {
+      days = window.Almanac.upcoming(d, 7);
+    } catch (e) {
+      return;
+    }
+    var todayYmd = days.length ? days[0].ymd : '';
+    el.alWeek.innerHTML = days.map(function (x) {
+      var isToday = x.ymd === todayYmd;
+      var terms = (x.yi || []).slice(0, 2).join('、') || '诸事不宜';
+      var md = x.ymd ? x.ymd.slice(5).replace('-', '/') : '';
+      // 农历初一显示「十月初一」，其余只显示日，既简洁又不歧义
+      var cn = x.dayCn === '初一' && x.monthCn ? x.monthCn + '月初一' : (x.dayCn || '');
+      return '<div class="al-week-row' + (isToday ? ' today' : '') + '">' +
+        '<span class="al-wd">' + escapeHtml(md) + '</span>' +
+        '<span class="al-wd-cn">' + escapeHtml(cn) + '</span>' +
+        '<span class="al-luck ' + (x.luck === '吉' ? 'ji' : 'xiong') + '">' +
+          (x.luck === '吉' ? '吉' : '凶') + '</span>' +
+        '<span class="al-week-terms"><i class="al-yi-k">宜</i>' + escapeHtml(terms) + '</span>' +
+        '</div>';
+    }).join('');
   }
 
   /* ---------------- 鼓励语 / 小标语 ---------------- */
@@ -523,6 +627,17 @@
     }
 
     $('btnEncourage').addEventListener('click', nextEncouragement);
+
+    /* 黄历：展开最近 7 天 */
+    var btnMore = $('btnAlmanacMore');
+    if (btnMore) {
+      btnMore.addEventListener('click', function () {
+        almanacOpen = !almanacOpen;
+        btnMore.setAttribute('aria-expanded', almanacOpen ? 'true' : 'false');
+        el.alWeek.hidden = !almanacOpen;
+        if (almanacOpen) renderWeek(new Date());
+      });
+    }
 
     /* 目标编辑 */
     el.goalEditor.addEventListener('click', function (e) {
