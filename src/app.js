@@ -10,6 +10,7 @@
   /* ---------------- 常量 ---------------- */
   var LS_KEY = 'niuniu-encourager:settings:v1';
   var MASK_KEY = 'niuniu-encourager:mask:v1';
+  var HIST_KEY = 'niuniu-encourager:history:v1';
 
   var DEFAULT_GOALS = [
     { emoji: '☕', name: '一杯瑞幸', price: 13.9 },
@@ -63,6 +64,12 @@
   var lastTexts = {};
   var isElectron = !!(window.desktop && window.desktop.isElectron);
 
+  var H = window.HistoryCore;
+  var history = loadHistory();
+  var lastHistWrite = 0;    // 上次落盘时间，用于节流
+  var afterDayWritten = ''; // 已经写过收尾记录的日期
+  var reportRenderedOn = '';
+
   /* ---------------- DOM ---------------- */
   var $ = function (id) { return document.getElementById(id); };
   var el = {
@@ -106,6 +113,13 @@
     alExtra: $('alExtra'),
     alTip: $('alTip'),
     alWeek: $('alWeek'),
+    rpMonth: $('rpMonth'),
+    rpDays: $('rpDays'),
+    rpAvg: $('rpAvg'),
+    rpBest: $('rpBest'),
+    rpCal: $('rpCal'),
+    rpNote: $('rpNote'),
+    reportStreak: $('reportStreak'),
     encourageText: $('encourageText'),
     toast: $('toast'),
     settingsMask: $('settingsMask'),
@@ -144,6 +158,49 @@
 
   function saveSettings() {
     try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch (e) { /* 隐私模式忽略 */ }
+  }
+
+  /* ---------------- 每日打卡记录 ---------------- */
+
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem(HIST_KEY);
+      if (!raw) return {};
+      var obj = JSON.parse(raw);
+      return (obj && typeof obj === 'object') ? obj : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveHistory() {
+    if (!H) return;
+    try {
+      history = H.prune(history, Date.now());
+      localStorage.setItem(HIST_KEY, JSON.stringify(history));
+    } catch (e) { /* 存不下就算了，不能影响计薪 */ }
+  }
+
+  /**
+   * 记录今天的进度。
+   * 主循环 50ms 一次，绝不能每次都写 localStorage（会卡）。
+   * 这里节流到最多每分钟落盘一次，下班时强制写一次收尾。
+   */
+  function recordProgress(c, now) {
+    if (!H) return;
+    if (c.earned <= 0) return;
+
+    var isAfter = c.phase === 'after';
+    // 下班后金额已经封顶，只需写一次；工作中按分钟节流
+    if (isAfter) {
+      if (afterDayWritten === H.dayKey(now)) return;
+    } else if ((now - lastHistWrite) < 60000) {
+      return;
+    }
+
+    lastHistWrite = now;
+    if (isAfter) afterDayWritten = H.dayKey(now);
+    if (H.upsert(history, now, c.earned, c.paidMs)) saveHistory();
   }
 
   /* ---------------- 工具 ---------------- */
@@ -269,6 +326,10 @@
     /* 黄历：内部自带「每天只渲染一次」的判断 */
     renderAlmanac(now);
 
+    /* 打卡记录（内部按分钟节流）与战报 */
+    recordProgress(c, now);
+    renderReport(now);
+
     /* 打码 */
     document.body.classList.toggle('masked', masked);
 
@@ -343,6 +404,87 @@
     return String(s).replace(/[&<>"]/g, function (ch) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
     });
+  }
+
+  /* ---------------- 本月战报 ----------------
+   * 统计口径来自 history.js（纯函数），这里只负责画。
+   * 战报一天只变一次，所以按「日期 + 当月记录数」做键，避免 50ms 重绘。
+   */
+  function renderReport(now) {
+    if (!H || !el.rpCal) return;
+
+    var month = H.thisMonth(history, now);
+    var days = H.calendar(history, now);
+    var streakDays = H.streak(history, now);
+    var key = H.dayKey(now) + '|' + month.days;
+    if (key === reportRenderedOn) return;
+    reportRenderedOn = key;
+
+    setText(el.rpMonth, 'rpMonth', '¥' + E.formatMoney(month.total, 2));
+    el.rpDays.innerHTML = '<span class="rp-num">' + month.days +
+      '</span><span class="rp-unit"> 天</span>';
+    setText(el.rpAvg, 'rpAvg', month.days > 0
+      ? '¥' + E.formatMoney(month.avgPerDay, 2) : '—');
+    // 只有一天数据时，"最高"和"本月到手"必然相同，看起来像 bug
+    var hasCompare = !!(month.best && month.days >= 2);
+    setText(el.rpBest, 'rpBest',
+      hasCompare ? '¥' + E.formatMoney(month.best.earned, 2) : '待累计');
+    el.rpBest.classList.toggle('rp-empty', !hasCompare);
+    if (streakDays > 0) {
+      el.reportStreak.innerHTML = '连续 ' + streakDays + ' 天';
+    } else {
+      setText(el.reportStreak, 'reportStreak', '还没开始攒');
+    }
+
+    var todayKey = H.dayKey(now);
+
+    // 按真实星期对齐：1 号前面补空格，周日排在一周的最后
+    // 注意 now 是时间戳（number），不是 Date 对象
+    var nd = new Date(now);
+    var firstDow = new Date(nd.getFullYear(), nd.getMonth(), 1).getDay();
+    var lead = firstDow === 0 ? 6 : firstDow - 1;   // 周一=0 … 周日=6
+    var blanks = '';
+    for (var b = 0; b < lead; b++) blanks += '<span class="rp-day rp-blank"></span>';
+
+    // 星期表头（周一起，与格子列序一致）
+    var head = ['一', '二', '三', '四', '五', '六', '日']
+      .map(function (w) { return '<span class="rp-dow">' + w + '</span>'; })
+      .join('');
+
+    el.rpCal.innerHTML = head + blanks + days.map(function (d) {
+      var cls = 'rp-day lv' + d.level;
+      if (d.future) cls += ' future';
+      else if (d.earned <= 0 && d.key !== todayKey) cls += ' missed';
+      if (d.key === todayKey) cls += ' today';
+      return '<span class="' + cls + '" title="' +
+        escapeHtml(d.key + (d.earned > 0 ? ' · ¥' + E.formatMoney(d.earned, 2) : ' · 无记录')) +
+        '">' + d.day + '</span>';
+    }).join('');
+
+    // 补满最后一行，保证网格整齐
+    var totalCells = lead + days.length;
+    var tail = (7 - (totalCells % 7)) % 7;
+    for (var t = 0; t < tail; t++) {
+      el.rpCal.insertAdjacentHTML('beforeend', '<span class="rp-day rp-blank"></span>');
+    }
+
+    /* 底部一句话：按当前进度给不同的说法 */
+    var passed = month.passedDays || 1;
+    var pace = month.days / passed;
+    var note;
+    if (month.days === 0) {
+      note = '今天下班后会自动记第一笔，攒着看才有意思。';
+    } else if (pace >= 0.9) {
+      note = '这个月几乎天天在岗，' + month.days + ' 天里有 ' + month.days + ' 天到账。';
+    } else if (month.days === 1 && month.best) {
+      note = '目前只有 1 天记录，攒到第 2 天就能比出高低了。';
+    } else if (month.best) {
+      note = '目前最高的一天是 ' + month.best.key.slice(5).replace('-', '/') +
+        '，那天进账 ¥' + E.formatMoney(month.best.earned, 2) + '。';
+    } else {
+      note = '已记录 ' + month.days + ' 天，继续攒。';
+    }
+    setText(el.rpNote, 'rpNote', note);
   }
 
   /* ---------------- 今日黄历 ----------------
@@ -656,7 +798,13 @@
     /* 导入导出 */
     $('btnExport').addEventListener('click', function () {
       commitGoalEditor();
-      var data = JSON.stringify({ app: 'work-encourager', version: 1, settings: settings }, null, 2);
+      var data = JSON.stringify({
+        app: 'work-encourager',
+        version: 2,          // v2 起带上打卡记录
+        exportedAt: new Date().toISOString(),
+        settings: settings,
+        history: history
+      }, null, 2);
       if (isElectron) {
         window.desktop.exportConfig(data).then(function (file) {
           if (file) toast('已导出到 ' + file);
@@ -683,9 +831,17 @@
           var s = obj && obj.settings ? obj.settings : obj;
           settings = normalize(s);
           saveSettings();
+
+          // 老版本配置没有 history 字段，有就一起恢复
+          if (obj && obj.history && typeof obj.history === 'object') {
+            history = H ? H.prune(obj.history, Date.now()) : obj.history;
+            saveHistory();
+            reportRenderedOn = '';
+          }
+
           fillSettingsForm();
           render(Date.now());
-          toast('配置已导入');
+          toast(obj && obj.history ? '配置与打卡记录已导入' : '配置已导入');
         } catch (err) {
           toast('文件格式不对，导入失败');
         }

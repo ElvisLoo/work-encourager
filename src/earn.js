@@ -317,7 +317,8 @@
     }
     if (passedWorkdays < 1) passedWorkdays = 1;
     var workdays = normWorkdays(cfg.workdaysPerMonth);
-    var dayPay = (Number(cfg.monthlySalary) || 0) / workdays;
+    // 与 rates() 口径一致：负月薪夹到 0，避免本月累计出现负数
+    var dayPay = Math.max(0, Number(cfg.monthlySalary) || 0) / workdays;
     var fullDays = passedWorkdays - 1;
     return {
       total: fullDays * dayPay + earnedToday,

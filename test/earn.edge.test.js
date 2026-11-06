@@ -288,10 +288,11 @@ test('monthToDate：工作日为 0 或负数时夹到 1 天，缺省/非法时�
   assert.strictEqual(E.monthToDate(cfg({ workdaysPerMonth: 'abc' }), ts(14, 0), 0).planDays, 21);
 });
 
-test('monthToDate：月薪为负数时累计不为负', () => {
+test('monthToDate：月薪为负数时按 0 处理，累计与日薪都不为负', () => {
   const m = E.monthToDate(cfg({ monthlySalary: -5000 }), ts(14, 0), 0);
-  assert.ok(m.total <= 0 && m.dayPay < 0, '当前实现不做负数夹取：total=' + m.total);
-}); // 备注：见 bug 报告，负月薪未经夹取
+  assert.strictEqual(m.dayPay, 0);
+  assert.strictEqual(m.total, 0);
+});
 
 test('formatMoney：0 与正负零统一输出零值串', () => {
   assert.strictEqual(E.formatMoney(0), '0.0000');

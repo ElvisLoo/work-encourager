@@ -554,6 +554,139 @@ body::after {
 }
 .footer-brand { letter-spacing: .05em; }
 
+/* ---------------- 本月战报 ---------------- */
+.report { padding-bottom: 13px; }
+.report > .card-title > span:first-child {
+  font-size: 12.5px;
+  letter-spacing: .1em;
+  color: var(--text);
+}
+.report > .card-title { align-items: center; margin-bottom: 11px; }
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rp-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rp-label {
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.rp-value {
+  font-family: var(--font-num);
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-cell:nth-child(1) .rp-value { color: var(--accent); }
+.rp-empty {
+  color: var(--text-2) !important;
+  font-size: 12px !important;
+  font-family: var(--font-ui);
+  letter-spacing: .02em;
+  font-weight: 400;
+}
+/* 数字用等宽体，中文单位用小一号的界面字体，避免「天」被撑大 */
+.rp-num {
+  font-family: var(--font-num);
+  font-size: 13px;
+  font-weight: 500;
+}
+.rp-unit {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--text-3);
+  margin-left: 3px;
+}
+#reportStreak {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  letter-spacing: .01em;
+}
+
+/* 打卡日历 */
+.rp-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 9px;
+}
+.rp-day {
+  height: 21px;
+  border-radius: 3px;
+  /* 没有进账的日子统一用浅底，数字保持可读；未来与过去的区别交给日期本身表达 */
+  background: var(--card-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-num);
+  font-size: 9px;
+  color: var(--text-2);
+  position: relative;
+}
+.rp-day.lv1 { background: #ecdcc4; color: #5c4a32; }
+.rp-day.lv2 { background: #d6b48a; color: #3a2d1c; }
+.rp-day.lv3 { background: #c08f58; color: #fff8ee; }
+.rp-day.lv4 { background: #a8692f; color: #fff8ee; }
+body.theme-night .rp-day { background: #2a231b; color: var(--text-2); }
+body.theme-night .rp-day.lv1 { background: #3a3026; color: #c8b494; }
+body.theme-night .rp-day.lv2 { background: #5a4630; color: #f0e0c8; }
+body.theme-night .rp-day.lv3 { background: #86603a; color: #fff8ee; }
+body.theme-night .rp-day.lv4 { background: #d99b58; color: #1a1510; font-weight: 600; }
+.rp-day.future {
+  color: var(--text-3);
+  opacity: .28;
+}
+/* 已经过去但没有进账：留一个淡淡的虚线框，提示"这天没记录" */
+.rp-day.missed {
+  /* 过去没有进账：只留极淡的轮廓，比「未来」略实一点点即可 */
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(210, 195, 168, .55);
+  color: var(--text-3);
+}
+.rp-dow {
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8.5px;
+  color: var(--text-3);
+  letter-spacing: .02em;
+}
+.rp-day.rp-blank {
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+.rp-day.today {
+  /* 今天用外环标记；深色格上必须用浅色环，否则和底色糊在一起 */
+  box-shadow: 0 0 0 1.5px var(--card), 0 0 0 3px var(--accent);
+  font-weight: 600;
+}
+
+.rp-note {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--text-3);
+  letter-spacing: .02em;
+}
+
+/* 迷你窗里不显示战报 */
+body.mode-mini .report { display: none; }
+
 /* ---------------- 今日黄历 ---------------- */
 .almanac { padding-bottom: 12px; }
 .almanac > .card-title > span:first-child {
@@ -995,7 +1128,8 @@ body.theme-night #alLuckBadge.luck-ji {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  /* 抬高到滚动内容之上的留白区，避免压住卡片里的日历 */
+  bottom: 14px;
   transform: translateX(-50%) translateY(8px);
   background: var(--text);
   color: var(--card);

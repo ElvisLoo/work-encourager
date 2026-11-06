@@ -1,6 +1,6 @@
 {
   "name": "work-encourager",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "牛马鼓励器 · 上班鼓励器 — 实时看见每一秒的进账（Windows / macOS / Linux 桌面应用，也可直接用浏览器打开）",
   "main": "src/main.js",
   "private": true,

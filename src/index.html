@@ -172,6 +172,34 @@
       </div>
     </section>
 
+    <!-- 本月战报 -->
+    <section class="card report" id="reportCard">
+      <div class="card-title">
+        <span>本月战报</span>
+        <span class="card-title-sub" id="reportStreak">连续 0 天</span>
+      </div>
+      <div class="report-grid">
+        <div class="rp-cell">
+          <span class="rp-label">本月到手</span>
+          <span class="rp-value" data-money-display id="rpMonth">¥0.00</span>
+        </div>
+        <div class="rp-cell">
+          <span class="rp-label">出勤</span>
+          <span class="rp-value" id="rpDays">0 天</span>
+        </div>
+        <div class="rp-cell">
+          <span class="rp-label">日均</span>
+          <span class="rp-value" data-money-display id="rpAvg">¥0.00</span>
+        </div>
+        <div class="rp-cell">
+          <span class="rp-label">最高一天</span>
+          <span class="rp-value" data-money-display id="rpBest">—</span>
+        </div>
+      </div>
+      <div class="rp-cal" id="rpCal" aria-label="本月打卡日历"></div>
+      <p class="rp-note" id="rpNote">每天下班后自动记一笔，攒着看才有意思。</p>
+    </section>
+
     <!-- 今日黄历 -->
     <section class="card almanac" id="almanacCard">
       <div class="card-title">
@@ -377,6 +405,7 @@
 <!-- lunar-javascript 由构建脚本内联；此处提供浏览器/Electron 下的加载路径 -->
 <script src="vendor/lunar.js"></script>
 <script src="earn.js"></script>
+<script src="history.js"></script>
 <script src="almanac.js"></script>
 <script src="app.js"></script>
 </body>

@@ -43,13 +43,20 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
-          name: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }} 首个版本
+          name: 牛马鼓励器 ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
           body: |
             实时看见每一秒的进账。
 
-            - Windows 安装版与便携版
-            - macOS / Linux 可自行编译
-            - 也可直接用 `src/index.html` 网页版
+            **下载哪个**
+            - `WorkEncourager-Setup-*.exe` — 安装版，带卸载程序，可在「应用和功能」里卸载
+            - `WorkEncourager-Portable-*.exe` — 便携版，不写注册表，放 U 盘也能跑
+
+            **本版更新**
+            - 新增「今日黄历」：农历、干支、生肖、宜忌、黄道吉日、节气与节日
+            - 黄历术语做了通俗化（嫁娶→结婚、开市→开张/启动新项目），并过滤掉与职场无关的条目
+            - 修复跨零点夜班在凌晨金额归零的问题，现在会接着前一晚那班累计
+            - 修复每月工作日填 0 时被当成「未填写」而回落到 21 天的问题
+            - 安装包改为真正的 NSIS 安装器，含卸载程序与系统卸载项
 
             > 安装包未做代码签名，SmartScreen 提示时选「更多信息 → 仍要运行」。
           files: |

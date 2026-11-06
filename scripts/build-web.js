@@ -46,6 +46,7 @@ const lunarJs = read(path.join(VENDOR, 'lunar.js'));
 let html = read(path.join(SRC, 'index.html'));
 const css = read(path.join(SRC, 'styles.css'));
 const earnJs = read(path.join(SRC, 'earn.js'));
+const histJs = read(path.join(SRC, 'history.js'));
 const almaJs = read(path.join(SRC, 'almanac.js'));
 const appJs = read(path.join(SRC, 'app.js'));
 
@@ -61,11 +62,12 @@ html = html.replace(
 );
 
 html = html.replace(
-  /<script src="vendor\/lunar\.js"><\/script>\s*<script src="earn\.js"><\/script>\s*<script src="almanac\.js"><\/script>\s*<script src="app\.js"><\/script>/,
+  /<script src="vendor\/lunar\.js"><\/script>\s*<script src="earn\.js"><\/script>\s*<script src="history\.js"><\/script>\s*<script src="almanac\.js"><\/script>\s*<script src="app\.js"><\/script>/,
   [
     '<!-- lunar-javascript (MIT) 内联，UMD 会挂到全局 -->',
     '<script>' + safe(lunarJs) + '</script>',
     '<script>' + safe(earnJs) + '</script>',
+    '<script>' + safe(histJs) + '</script>',
     '<script>' + safe(almaJs) + '</script>',
     '<script>' + safe(appJs) + '</script>'
   ].join('\n')
