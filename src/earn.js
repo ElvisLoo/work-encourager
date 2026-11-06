@@ -63,6 +63,16 @@
       var ds = hhmmToMinutes(cfg.dinnerStart), de = hhmmToMinutes(cfg.dinnerEnd);
       if (ds != null && de != null && de > ds) breaks.push([ds, de]);
     }
+
+    // 跨零点班次：休息时间可能写在「次日」，
+    // 例如 22:00→06:00、午休 02:00→03:00，此时 02:00 要按 1440+120 理解。
+    // 判断依据：休息开始时间早于上班时间，就认为它落在次日。
+    if (off > 1440) {
+      breaks = breaks.map(function (b) {
+        return b[0] < work ? [b[0] + 1440, b[1] + 1440] : b;
+      });
+    }
+
     // 只保留与工作区间有交集的部分，并按开始时间排序
     breaks = breaks
       .map(function (b) {
@@ -94,12 +104,26 @@
   }
 
   /**
+   * 每月工作日归一化：非法/缺省 -> 21；0 或负数 -> 1；上限 31。
+   * 用 || 会踩到 0 的坑（0 || 21 得 21），所以显式判断。
+   */
+  function normWorkdays(v) {
+    var n = Number(v);
+    if (!isFinite(n) || n <= 0) {
+      // undefined / null / '' / NaN / 'abc' 视为缺省；显式传 0 或负数则夹到 1
+      if (v === 0 || (typeof v === 'number' && n < 0)) return 1;
+      return 21;
+    }
+    return Math.min(31, n);
+  }
+
+  /**
    * 计算薪资速率
    * @returns {{dayPay:number, perMin:number, perSec:number, perHour:number, paidMinutes:number}}
    */
   function rates(cfg) {
     var monthly = Math.max(0, Number(cfg.monthlySalary) || 0);
-    var workdays = Math.max(1, Number(cfg.workdaysPerMonth) || 21);
+    var workdays = normWorkdays(cfg.workdaysPerMonth);
     var dayPay = monthly / workdays;
     var paidMin = paidMinutesOfDay(cfg);
     var perMin = paidMin > 0 ? dayPay / paidMin : 0;
@@ -254,7 +278,7 @@
       if (wd !== 0 && wd !== 6) passedWorkdays++;
     }
     if (passedWorkdays < 1) passedWorkdays = 1;
-    var workdays = Math.max(1, Number(cfg.workdaysPerMonth) || 21);
+    var workdays = normWorkdays(cfg.workdaysPerMonth);
     var dayPay = (Number(cfg.monthlySalary) || 0) / workdays;
     var fullDays = passedWorkdays - 1;
     return {
