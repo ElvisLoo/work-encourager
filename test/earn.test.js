@@ -93,16 +93,32 @@ test('下班后定格为满勤金额', () => {
   assert.strictEqual(c.toOffMs, 0);
 });
 
-test('跨零点班次在下班前持续累计', () => {
+test('跨零点班次：凌晨时分算作前一晚那一班，金额持续累计', () => {
   const cfg = Object.assign({}, baseCfg, {
     workStart: '22:00', workEnd: '06:00', lunchEnabled: false, dinnerEnabled: false
   });
-  const c = E.compute(cfg, ts(1, 0));
   const dayPay = 20000 / 21;
-  assert.strictEqual(c.phase, 'before'); // 当天 22:00 前一秒仍在「未开工」
-  // 前一刻从上一晚开始的部分不重复计入，避免跨天双计
-  assert.strictEqual(c.earned, 0);
-  assert.ok(dayPay > 0);
+
+  // 01:00 时，此刻在上的其实是「昨天 22:00 开始」的那一班，已干 3 小时
+  const c = E.compute(cfg, ts(1, 0));
+  assert.strictEqual(c.phase, 'working');
+  assert.strictEqual(c.paidMs, 3 * 3600000);
+  assert.ok(Math.abs(c.earned - dayPay * 3 / 8) < 1e-9);
+
+  // 05:00 仍是同一班，已干 7 小时
+  const c2 = E.compute(cfg, ts(5, 0));
+  assert.strictEqual(c2.phase, 'working');
+  assert.strictEqual(c2.paidMs, 7 * 3600000);
+
+  // 06:00 之后下班，归零；到当晚 22:00 才开新班
+  const c3 = E.compute(cfg, ts(7, 0));
+  assert.strictEqual(c3.phase, 'before');
+  assert.strictEqual(c3.earned, 0);
+
+  // 当晚 22:30 新班开始，从零重新累计
+  const c4 = E.compute(cfg, ts(22, 30));
+  assert.strictEqual(c4.phase, 'working');
+  assert.strictEqual(c4.paidMs, 30 * 60000);
 });
 
 test('金额格式化：千分位与小数位', () => {

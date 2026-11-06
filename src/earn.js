@@ -144,8 +144,46 @@
    *            phase:'before'|'working'|'break'|'after', toOffMs:number,
    *            nextBreakStart:number|null, segments:Array, dayStart:number, offMs:number}}
    */
+  /**
+   * 选出「当前时刻正在经历的班次」的基准日。
+   *
+   * 日班（下班晚于上班）永远以今天为基准；
+   * 跨零点班次（如 22:00→06:00）在凌晨时段，此刻真正在上的其实是
+   * 昨天 22:00 开始的那一班，所以基准日要退回一天。
+   * 否则 startOfDay(02:30) 已翻到新的一天，而新班次要到 22:00 才开始，
+   * 于是 phase 变成 before、金额归零（即 K-001）。
+   *
+   * @returns {number} 基准日的 0 点时间戳
+   */
+  function shiftBaseDay(cfg, nowMs) {
+    var today = startOfDay(nowMs);
+    var work = hhmmToMinutes(cfg.workStart);
+    var off = hhmmToMinutes(cfg.workEnd);
+    if (work == null || off == null) return today;
+    if (off > work) return today; // 日班，不跨零点
+
+    // 跨零点：今天 0 点起算的这一班要到今晚才开工；
+    // 若此刻已经过了上班时刻、或还在昨班的下班时刻之前，就落在昨班尾巴上。
+    var todaySegs = buildPaidSegments(cfg, today);
+    if (!todaySegs.length) return today;
+    var todayStart = todaySegs[0].start;
+    var todayEnd = todaySegs[todaySegs.length - 1].end;
+
+    // 此刻在「今天的班次」里，就用今天
+    if (nowMs >= todayStart && nowMs < todayEnd) return today;
+
+    // 否则看昨天那一班是否还罩着此刻
+    var yStart = startOfDay(today - 1);
+    var ySegs = buildPaidSegments(cfg, yStart);
+    if (ySegs.length) {
+      var yS = ySegs[0].start, yE = ySegs[ySegs.length - 1].end;
+      if (nowMs >= yS && nowMs < yE) return yStart;
+    }
+    return today;
+  }
+
   function compute(cfg, nowMs) {
-    var dayStart = startOfDay(nowMs);
+    var dayStart = shiftBaseDay(cfg, nowMs);
     var segs = buildPaidSegments(cfg, dayStart);
     var r = rates(cfg);
     var totalPaidMs = 0;
@@ -311,6 +349,7 @@
     paidMinutesOfDay: paidMinutesOfDay,
     rates: rates,
     compute: compute,
+    shiftBaseDay: shiftBaseDay,
     formatDuration: formatDuration,
     formatClock: formatClock,
     formatMoney: formatMoney,

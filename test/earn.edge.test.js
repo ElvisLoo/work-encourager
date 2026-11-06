@@ -83,18 +83,6 @@ test('跨零点班次下计薪段落在次日：两段拼成 420 分钟且首尾
   assert.strictEqual((segs[1].end - day) / 60000, 30 * 60);
 });
 
-test('跨零点班次在凌晨 02:30 的现状：日界已切换，金额回到 0（已知问题，见 known-issues）', () => {
-  // 夜班 22:00→06:00 在 02:30 时，用户直觉上应该已累计 4.5 小时；
-  // 但 startOfDay(02:30) 已翻到新的一天，而这一天 22:00 才开始，于是 phase=before、earned=0。
-  // 这是 v1.0.0 就存在的口径问题，v1.1.0 先锁定现状、写进 known-issues，再由后续版本修。
-  const c = cfg({ workStart: '22:00', workEnd: '06:00', lunchStart: '02:00', lunchEnd: '03:00' });
-  const r = E.compute(c, ts(2, 30));
-  assert.strictEqual(r.phase, 'before');
-  assert.strictEqual(r.paidMs, 0);
-  // 但计薪总量本身是对的：8 小时在岗 − 1 小时午休 = 420 分钟
-  assert.strictEqual(E.paidMinutesOfDay(c), 420);
-});
-
 test('午休完全落在工作区间之外（20:00–21:00）：不重复扣除，仍按在岗 9 小时计薪', () => {
   assert.strictEqual(E.paidMinutesOfDay(cfg({ lunchStart: '20:00', lunchEnd: '21:00' })), 540);
   assert.strictEqual(E.buildPaidSegments(cfg({ lunchStart: '20:00', lunchEnd: '21:00' }), E.startOfDay(ts(9, 0))).length, 1);
@@ -187,19 +175,44 @@ test('phase 四态：before / working / break / after 按时刻依次出现', ()
   }
 });
 
-test('hour sweep：一天 1440 个分钟点里，earned 始终在 [0, dayPay] 内且不倒退', () => {
+test('hour sweep：一天 1440 个分钟点里，earned 始终在 [0, dayPay] 内，且同一班次内不倒退', () => {
+  // 注意：跨零点班次在「下班后重新开工」处会归零，这是正确的（新的一天、新的一班），
+  // 所以只在同一班次内部要求单调不倒退，换班次时允许重置。
   for (const c of [baseCfg, cfg({ workStart: '22:00', workEnd: '06:00', lunchStart: '02:00', lunchEnd: '03:00', dinnerEnabled: true, dinnerStart: '04:30', dinnerEnd: '05:00' })]) {
     const dayPay = E.rates(c).dayPay;
     let prev = -1;
+    let prevBase = null;
     for (let m = 0; m < 1440; m++) {
-      const r = E.compute(c, ts(0, 0) + m * 60000);
+      const now = ts(0, 0) + m * 60000;
+      const r = E.compute(c, now);
       assert.ok(r.earned >= 0, c.workStart + ' 班次 ' + m + ' 分时 earned 为负：' + r.earned);
       assert.ok(r.earned <= dayPay + 1e-9, c.workStart + ' 班次 ' + m + ' 分时 earned 超过 dayPay：' + r.earned);
       assert.ok(r.progress >= 0 && r.progress <= 1, c.workStart + ' 班次 ' + m + ' 分时 progress 越界：' + r.progress);
-      assert.ok(r.earned >= prev - 1e-9, c.workStart + ' 班次 ' + m + ' 分时 earned 倒退');
+      // 只有还在同一个基准日（同一班次）时才要求不倒退
+      if (prevBase === r.dayStart) {
+        assert.ok(r.earned >= prev - 1e-9, c.workStart + ' 班次 ' + m + ' 分时 earned 在同班次内倒退');
+      }
       prev = r.earned;
+      prevBase = r.dayStart;
     }
   }
+});
+
+test('夜班凌晨不再归零：02:30 属于前一日 22:00 开始的班次', () => {
+  const c = cfg({ workStart: '22:00', workEnd: '06:00', lunchStart: '02:00', lunchEnd: '03:00' });
+  const r = E.compute(c, new Date(2026, 10, 6, 2, 30, 0).getTime());
+  // 22:00 → 02:00 共 4 小时，02:00→03:00 是午休
+  assert.strictEqual(r.phase, 'break');
+  assert.strictEqual(r.paidMs, 240 * 60000);
+  assert.ok(r.earned > 0, '夜班凌晨的到手金额不应为 0');
+  // 03:30 已恢复计薪
+  const r2 = E.compute(c, new Date(2026, 10, 6, 3, 30, 0).getTime());
+  assert.strictEqual(r2.phase, 'working');
+  assert.strictEqual(r2.paidMs, 270 * 60000);
+  // 下班后归零，等当晚 22:00 再开新班
+  const r3 = E.compute(c, new Date(2026, 10, 6, 14, 0, 0).getTime());
+  assert.strictEqual(r3.phase, 'before');
+  assert.strictEqual(r3.earned, 0);
 });
 
 test('上班与下班时间相同：被当作跨零点 24 小时班次，计薪一整天', () => {
