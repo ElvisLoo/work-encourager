@@ -11,3 +11,8 @@ qa-tmp/
 # 本地发布辅助脚本（一次性工具，不入库）
 *.bat
 scripts/push_all.py
+
+# 站点预览截图（本地验收用）
+site-preview-*.png
+site-full.png
+site-mobile.png
