@@ -1,7 +1,13 @@
 name: Deploy Site
 
-# 把 site/ 目录发布到 GitHub Pages。
-# 只在 site/ 或本工作流本身变动时触发，避免改代码就重新部署一遍。
+# 把 site/ 发布到 GitHub Pages。
+#
+# 为什么用 gh-pages 分支而不是官方 Pages Actions：
+#   官方流程需要 configure-pages，而它要求仓库先在 Settings → Pages
+#   里把 Source 设成「GitHub Actions」。仓库没设过时该步骤会 404，
+#   且没法用 GITHUB_TOKEN 自动开启（创建 Pages 站点需要更高权限）。
+#   推一个 gh-pages 分支则只需要 contents:write，仓库设置里选
+#   「Deploy from a branch → gh-pages」即可，同样全自动。
 
 on:
   push:
@@ -12,39 +18,25 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 配置 Pages
-        uses: actions/configure-pages@v5
-        # 注意：不加 enablement:true —— 用 GITHUB_TOKEN 创建 Pages 站点需要
-        # 额外权限，实测会 401。仓库需在 Settings → Pages 里手动
-        # 把 Source 选为「GitHub Actions」一次，之后本工作流每次都能正常部署。
-
-      - name: 打包站点
-        uses: actions/upload-pages-artifact@v3
+      - name: 发布到 gh-pages 分支
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: 发布
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          # 保留历史会让仓库越来越大，站点内容是纯静态，直接覆盖即可
+          force_orphan: true
+          commit_message: 'deploy: ${{ github.event.head_commit.message }}'
